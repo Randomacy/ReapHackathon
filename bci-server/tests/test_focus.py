@@ -3,13 +3,14 @@ import math
 from src.focus import FocusEstimator
 
 
-def feed(estimator, start, seconds, beta_amplitude, alpha_amplitude):
+def feed(estimator, start, seconds, beta_amplitude, alpha_amplitude,
+         offsets=(0, 0, 0, 0)):
     fs = estimator.sample_rate
     for index in range(int(seconds * fs)):
         t = start + index / fs
         beta = beta_amplitude * math.sin(2 * math.pi * 18 * t)
         alpha = alpha_amplitude * math.sin(2 * math.pi * 10 * t)
-        estimator.ingest_eeg([beta + alpha] * 4, t)
+        estimator.ingest_eeg([offset + beta + alpha for offset in offsets], t)
         if index % (fs // 2) == 0:
             estimator.ingest_acc([0, 0, 1], t)
             result = estimator.evaluate(t)
@@ -58,3 +59,15 @@ def test_diagnostics_include_bands_and_bounded_local_trace():
     assert diagnostics["baseline_progress"] == 1.0
     assert set(diagnostics["band_powers"]) == {"theta", "alpha", "beta"}
     assert diagnostics["engagement_ratio"] > 0
+
+
+def test_muse_dc_offset_does_not_hide_focus_feature():
+    estimator = FocusEstimator(baseline_seconds=30)
+    result = feed(estimator, 0, 7, 3, 1, offsets=(700, 1100, 800, 900))
+    diagnostics = estimator.diagnostics(now=7)
+    assert result.quality == "good"
+    assert result.score is None  # The Tempo event waits for individual calibration.
+    assert diagnostics["engagement_ratio"] > 0.20
+    assert diagnostics["reference_state"] == "focused"
+    assert diagnostics["band_powers"]["beta"] > 0
+    assert diagnostics["baseline_progress"] > 0

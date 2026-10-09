@@ -7,7 +7,7 @@ import statistics
 import time
 
 import numpy as np
-from scipy.signal import welch
+from scipy.signal import butter, iirnotch, sosfilt, sosfilt_zi, tf2sos, welch
 
 
 @dataclass(frozen=True)
@@ -34,7 +34,13 @@ class FocusEstimator:
         self.dip_score = dip_score
         self.sample_rate = sample_rate
         self.samples = deque(maxlen=sample_rate * 4)
+        self.filtered_samples = deque(maxlen=sample_rate * 4)
         self.times = deque(maxlen=sample_rate * 4)
+        self._highpass = butter(2, 1.0, btype="highpass", fs=sample_rate, output="sos")
+        notch_b, notch_a = iirnotch(50, Q=30, fs=sample_rate)
+        self._notch = tf2sos(notch_b, notch_a)
+        self._lowpass = butter(4, 40, btype="lowpass", fs=sample_rate, output="sos")
+        self._reset_filters()
         self.last_eeg_at = None
         self.last_acc_at = None
         self.last_acc = None
@@ -47,7 +53,26 @@ class FocusEstimator:
         self.last_state = "unknown"
         self.band_powers = None
         self.engagement_ratio = None
+        self.reference_state = "unknown"
         self.quality_reason = "No EEG packets yet."
+
+    def _reset_filters(self):
+        self._filter_states = None
+
+    def _filter(self, values):
+        sample = np.asarray(values, dtype=float).reshape(1, 4)
+        if self._filter_states is None:
+            # Start the high-pass at the observed DC level to avoid a false spike.
+            hp_state = sosfilt_zi(self._highpass)[:, :, None] * sample[0][None, None, :]
+            self._filter_states = [
+                hp_state,
+                np.zeros((len(self._notch), 2, 4)),
+                np.zeros((len(self._lowpass), 2, 4)),
+            ]
+        for index, sos in enumerate((self._highpass, self._notch, self._lowpass)):
+            sample, self._filter_states[index] = sosfilt(
+                sos, sample, axis=0, zi=self._filter_states[index])
+        return tuple(float(value) for value in sample[0])
 
     def ingest_eeg(self, values, now=None):
         now = time.monotonic() if now is None else now
@@ -55,6 +80,7 @@ class FocusEstimator:
             self._clear_signal()
             return
         self.samples.append(tuple(float(v) for v in values))
+        self.filtered_samples.append(self._filter(values))
         self.times.append(now)
         self.last_eeg_at = now
 
@@ -66,16 +92,20 @@ class FocusEstimator:
 
     def _clear_signal(self):
         self.samples.clear()
+        self.filtered_samples.clear()
         self.times.clear()
+        self._reset_filters()
         self.last_eeg_at = None
         self.baseline_values.clear()
         self.baseline_started = None
         self.baseline = None
         self.dip_since = None
         self.recovery_since = None
+        self.episode_fired = False
         self.last_state = "unknown"
         self.band_powers = None
         self.engagement_ratio = None
+        self.reference_state = "unknown"
         self.quality_reason = "No EEG packets yet."
 
     def _unknown(self, quality, connection, reason):
@@ -89,18 +119,19 @@ class FocusEstimator:
         now = time.monotonic() if now is None else now
         self.band_powers = None
         self.engagement_ratio = None
+        self.reference_state = "unknown"
         if self.last_eeg_at is None or now - self.last_eeg_at > 2.0:
             self._clear_signal()
             return self._unknown("disconnected", "disconnected", "No recent EEG packets.")
         if len(self.samples) < self.sample_rate * 4:
             return self._unknown("poor", "connected", "Collecting four seconds of EEG.")
 
-        data = np.asarray(self.samples, dtype=float)
+        data = np.asarray(self.filtered_samples, dtype=float)
         duration = self.times[-1] - self.times[0]
         if duration < 3.7 or duration > 4.3:
             return self._unknown("poor", "connected", "EEG packet timing is outside the expected range.")
         if np.max(np.abs(data)) > 1000:
-            return self._unknown("poor", "connected", "Large EEG amplitude; check electrode contact and movement.")
+            return self._unknown("poor", "connected", "Large filtered EEG variation; check electrode contact and movement.")
         if np.any(np.std(data, axis=0) < 0.5):
             return self._unknown("poor", "connected", "A flat EEG channel suggests poor electrode contact.")
         if self.last_acc_at is not None and now - self.last_acc_at < 2:
@@ -111,7 +142,7 @@ class FocusEstimator:
         freqs, psd = welch(data.T, fs=self.sample_rate, nperseg=256,
                            noverlap=128, detrend="constant")
         def power(lo, hi):
-            band = (freqs >= lo) & (freqs < hi)
+            band = (freqs >= lo) & (freqs <= hi)
             return float(np.mean(psd[:, band]))
         theta = power(4, 8)
         alpha = power(8, 13)
@@ -121,13 +152,16 @@ class FocusEstimator:
             return self._unknown("poor", "connected", "Frequency-band power could not be computed.")
         self.band_powers = {"theta": theta, "alpha": alpha, "beta": beta}
         self.engagement_ratio = ratio
+        self.reference_state = ("focused" if ratio >= 0.20 else
+                                "relaxed" if ratio <= 0.12 else "neutral")
 
         if self.baseline is None:
             if self.baseline_started is None:
                 self.baseline_started = now
             self.baseline_values.append(ratio)
             if now - self.baseline_started < self.baseline_seconds:
-                return self._unknown("poor", "connected", "Calibrating your individual baseline.")
+                self.quality_reason = "Calibrating your individual baseline."
+                return Estimate("unknown", None, "good", 0, "connected")
             self.baseline = max(statistics.median(self.baseline_values), 1e-6)
             self.baseline_values.clear()
 
@@ -193,6 +227,7 @@ class FocusEstimator:
             "band_powers": self.band_powers,
             "quality_reason": self.quality_reason,
             "engagement_ratio": self.engagement_ratio,
+            "reference_state": self.reference_state,
             "baseline_ratio": self.baseline,
             "baseline_progress": round(baseline_progress, 3),
             "dip_progress": round(dip_progress, 3),

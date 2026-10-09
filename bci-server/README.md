@@ -85,8 +85,13 @@ when packets stop.
 With the BCI service running in either mode, open
 **http://127.0.0.1:8001/visualizer** in a browser. In live mode, it shows the
 four raw EEG traces, packet age and rate, theta/alpha/beta power, engagement
-ratio, baseline progress, focus score, and dip hold time. Allow at least four
-seconds for the EEG window and another 30 seconds for the personal baseline.
+ratio, a Muse2Demo-style focus/neutral/relax label, baseline progress, Tempo's
+focus score, and dip hold time. The frequency bands use a stateful 1 Hz
+high-pass, 50 Hz notch, and 40 Hz low-pass filter, as in the reference demo;
+raw channel offsets do not disqualify otherwise usable EEG. The label and
+engagement ratio appear after the first four seconds. Tempo's separate
+baseline-relative score needs another 30 seconds of usable signal before it
+can appear or trigger an event.
 Simulator mode has clearly labelled state buttons and no pretend EEG waveform.
 
 The page reads `GET /v1/visualization`, a local diagnostic endpoint containing

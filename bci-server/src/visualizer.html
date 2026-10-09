@@ -96,6 +96,7 @@
       <div class="band-row"><span>Alpha</span><div class="band-track"><div id="alpha-bar" class="band-fill alpha"></div></div><strong id="alpha-value">—</strong></div>
       <div class="band-row"><span>Beta</span><div class="band-track"><div id="beta-bar" class="band-fill beta"></div></div><strong id="beta-value">—</strong></div>
       <div class="ratio"><span class="muted">Engagement index · beta / (alpha + theta)</span><strong id="ratio">—</strong></div>
+      <div class="ratio"><span class="muted">Muse2Demo style label · focus ≥ 0.20, relax ≤ 0.12</span><strong id="reference-state">—</strong></div>
     </section>
     <section class="card" aria-label="Focus score history"><div class="card-head"><div><h2>Focus over time</h2><div class="small">Last 60 seconds · gaps mean unknown signal</div></div><span id="threshold" class="pill">Dip threshold 0.35</span></div><div class="history-wrap"><canvas id="history" aria-label="Focus score over time"></canvas></div><div class="history-note"><span>60 seconds ago</span><span>Now</span></div></section>
   </div>
@@ -130,15 +131,19 @@
     for (let i=1; i<4; i++) { ctx.beginPath(); ctx.moveTo(0,i*rowHeight); ctx.lineTo(width,i*rowHeight); ctx.stroke(); }
     for (let i=0; i<4; i++) { ctx.beginPath(); ctx.moveTo(0,(i+.5)*rowHeight); ctx.lineTo(width,(i+.5)*rowHeight); ctx.stroke(); }
     for (let i=1; i<8; i++) { ctx.beginPath(); ctx.moveTo(i*width/8,0); ctx.lineTo(i*width/8,height); ctx.stroke(); }
-    const amplitudes = rows.flat().map(Math.abs).sort((a,b)=>a-b);
+    const offsets = rows.map(samples => {
+      const sorted = [...samples].sort((a,b)=>a-b);
+      return sorted.length ? sorted[Math.floor(sorted.length/2)] : 0;
+    });
+    const amplitudes = rows.flatMap((samples,row) => samples.map(value=>Math.abs(value-offsets[row]))).sort((a,b)=>a-b);
     const scale = Math.max(10, (amplitudes[Math.floor(amplitudes.length*.95)] || 0)*1.4);
-    $('scale').textContent = rows[0]?.length ? `±${scale.toFixed(0)} µV display scale` : 'Waiting for raw EEG';
+    $('scale').textContent = rows[0]?.length ? `±${scale.toFixed(0)} µV around each channel median` : 'Waiting for raw EEG';
     rows.forEach((samples,row) => {
       if (samples.length < 2) return;
       ctx.strokeStyle = colors[row]; ctx.lineWidth = 1.6; ctx.beginPath();
       samples.forEach((value,index) => {
         const x = 62 + index/(samples.length-1)*(width-68);
-        const y = (row+.5)*rowHeight - Math.max(-1,Math.min(1,value/scale))*rowHeight*.42;
+        const y = (row+.5)*rowHeight - Math.max(-1,Math.min(1,(value-offsets[row])/scale))*rowHeight*.42;
         if (index === 0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
       });
       ctx.stroke();
@@ -196,6 +201,7 @@
     const powers=data.band_powers||{}; const max=Math.max(powers.theta||0,powers.alpha||0,powers.beta||0,1e-12);
     for (const band of ['theta','alpha','beta']) { const value=powers[band]; $(''+band+'-value').textContent=fmt(value); $(''+band+'-bar').style.width=value==null?'0%':`${Math.max(3,Math.sqrt(value/max)*100)}%`; }
     $('ratio').textContent=fmt(data.engagement_ratio);
+    $('reference-state').textContent=data.reference_state==='unknown'?'—':data.reference_state;
     $('threshold').textContent=`Dip threshold ${data.dip_score_threshold.toFixed(2)}`;
     const event=data.latest_focus_event;
     $('event-source').textContent=event?.source||'—'; $('event-state').textContent=event?.state||'—';
