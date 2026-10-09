@@ -1,0 +1,25 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 14px 0 20px;
+  padding: 10px 18px;
+  border-radius: 9999px;
+  background: rgba(107, 66, 38, 0.08);
+  border: 1px solid var(--coffee-border);
+  color: var(--coffee-text);
+  font-size: 15px;
+  font-weight: 600;
+  max-width: 100%;
+}
+
+.dot {
+  color: var(--coffee-text-muted);
+}
+
+.merchant,
+.item,
+.price {
+  white-space: nowrap;
+}

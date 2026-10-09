@@ -1,0 +1,19 @@
+.face {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  background: var(--coffee-surface);
+  border: 1px solid var(--coffee-border);
+  box-shadow:
+    0 14px 30px rgba(74, 47, 34, 0.18),
+    0 3px 8px rgba(74, 47, 34, 0.12);
+}
+
+.emoji {
+  display: block;
+  font-size: 72px;
+  line-height: 1;
+}

@@ -1,0 +1,131 @@
+.overlayRoot {
+  --coffee-surface: rgba(255, 250, 244, 0.94);
+  --coffee-border: rgba(255, 255, 255, 0.7);
+  --coffee-text: #4a2f22;
+  --coffee-text-muted: #8a6a52;
+  --coffee-accent: #6b4226;
+  --coffee-accent-hover: #563319;
+  --coffee-focus-ring: #b98a5e;
+
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 8px;
+}
+
+.companion {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 400px;
+  padding: 0 16px;
+}
+
+.faceSlot {
+  display: flex;
+  justify-content: center;
+}
+
+.bubbleSlot {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.bubbleText {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.4;
+  font-weight: 600;
+  color: var(--coffee-text);
+}
+
+.buttonRow {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+.primaryButton {
+  min-height: 48px;
+  padding: 0 22px;
+  border: none;
+  border-radius: 9999px;
+  background: var(--coffee-accent);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.12s ease, background-color 0.15s ease;
+}
+
+.primaryButton:hover {
+  background: var(--coffee-accent-hover);
+}
+
+.primaryButton:active {
+  transform: scale(0.96);
+}
+
+.primaryButton:focus-visible {
+  outline: 3px solid var(--coffee-focus-ring);
+  outline-offset: 2px;
+}
+
+.secondaryButton {
+  min-height: 48px;
+  padding: 0 22px;
+  border: 1.5px solid var(--coffee-accent);
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--coffee-accent);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.12s ease, background-color 0.15s ease;
+}
+
+.secondaryButton:hover {
+  background: rgba(107, 66, 38, 0.08);
+}
+
+.secondaryButton:active {
+  transform: scale(0.96);
+}
+
+.secondaryButton:focus-visible {
+  outline: 3px solid var(--coffee-focus-ring);
+  outline-offset: 2px;
+}
+
+.loadingDots {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--coffee-accent);
+}
+
+.debugHint {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  font-size: 12px;
+  color: rgba(74, 47, 34, 0.75);
+  background: rgba(255, 250, 244, 0.9);
+  border: 1px solid var(--coffee-border);
+  padding: 6px 10px;
+  border-radius: 10px;
+}
