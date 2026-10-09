@@ -6,6 +6,9 @@
   --coffee-accent: #6b4226;
   --coffee-accent-hover: #563319;
   --coffee-focus-ring: #b98a5e;
+  --coffee-avatar-surface-start: #d9b88f;
+  --coffee-avatar-surface-end: #cba27a;
+  --coffee-avatar-border: rgba(107, 66, 38, 0.18);
 
   position: fixed;
   inset: 0;
