@@ -1,14 +1,18 @@
 .overlayRoot {
-  --coffee-surface: rgba(255, 250, 244, 0.94);
-  --coffee-border: rgba(255, 255, 255, 0.7);
-  --coffee-text: #4a2f22;
-  --coffee-text-muted: #8a6a52;
-  --coffee-accent: #6b4226;
-  --coffee-accent-hover: #563319;
-  --coffee-focus-ring: #b98a5e;
-  --coffee-avatar-surface-start: #d9b88f;
-  --coffee-avatar-surface-end: #cba27a;
-  --coffee-avatar-border: rgba(107, 66, 38, 0.18);
+  /* Dark coffee-roast theme: the sprite pack's line art is drawn with a
+     near-transparent fill, so it only reads clearly against a dark
+     backdrop (confirmed by compositing the sprites over several tones). */
+  --coffee-surface: rgba(38, 26, 20, 0.94);
+  --coffee-border: rgba(255, 255, 255, 0.14);
+  --coffee-text: #f5e8db;
+  --coffee-text-muted: #c9ad93;
+  --coffee-accent: #d9b88f;
+  --coffee-accent-hover: #c9a57a;
+  --coffee-on-accent: #2b1810;
+  --coffee-focus-ring: #e0ab74;
+  --coffee-avatar-surface-start: #2b1d16;
+  --coffee-avatar-surface-end: #1d130e;
+  --coffee-avatar-border: rgba(255, 255, 255, 0.14);
 
   position: fixed;
   inset: 0;
@@ -61,7 +65,7 @@
   border: none;
   border-radius: 9999px;
   background: var(--coffee-accent);
-  color: #fff;
+  color: var(--coffee-on-accent);
   font-size: 16px;
   font-weight: 700;
   cursor: pointer;
@@ -95,7 +99,7 @@
 }
 
 .secondaryButton:hover {
-  background: rgba(107, 66, 38, 0.08);
+  background: rgba(217, 184, 143, 0.14);
 }
 
 .secondaryButton:active {
@@ -126,8 +130,8 @@
   left: 16px;
   bottom: 16px;
   font-size: 12px;
-  color: rgba(74, 47, 34, 0.75);
-  background: rgba(255, 250, 244, 0.9);
+  color: rgba(245, 232, 219, 0.85);
+  background: rgba(38, 26, 20, 0.85);
   border: 1px solid var(--coffee-border);
   padding: 6px 10px;
   border-radius: 10px;
