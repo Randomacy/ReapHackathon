@@ -1,10 +1,12 @@
 """Local BCI API: Muse OSC input or a labelled simulator."""
 
 from contextlib import asynccontextmanager
+from collections import deque
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import logging
 import os
+from pathlib import Path
 from queue import Empty, Full, Queue
 import threading
 import time
@@ -12,6 +14,7 @@ from uuid import uuid4
 
 import httpx
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 from pythonosc.dispatcher import Dispatcher
 from pythonosc.osc_server import ThreadingOSCUDPServer
@@ -20,6 +23,7 @@ from .focus import Estimate, FocusEstimator
 
 LOG = logging.getLogger("bci")
 VERSION = "1.0"
+VISUALIZER_FILE = Path(__file__).with_name("visualizer.html")
 
 
 @dataclass(frozen=True)
@@ -128,6 +132,9 @@ class BCIService:
                                         settings.dip_seconds, settings.dip_score)
         self.publisher = Publisher(settings)
         self.latest_event = None
+        self.latest_estimate = Estimate("unknown", None, "disconnected", 0,
+                                        "disconnected")
+        self.score_history = deque(maxlen=120)
         self.connection = "simulated" if settings.mode == "simulator" else "disconnected"
         self.stop_event = threading.Event()
         self.osc_server = None
@@ -170,6 +177,12 @@ class BCIService:
             with self.lock:
                 estimate = self.estimator.evaluate()
                 self.connection = estimate.connection
+                self.latest_estimate = estimate
+                self.score_history.append({
+                    "at_ms": int(time.time() * 1000),
+                    "score": estimate.score,
+                    "quality": estimate.quality,
+                })
             condition = (estimate.state, estimate.quality, estimate.connection)
             if condition != self.last_published_condition:
                 self.last_published_condition = condition
@@ -189,9 +202,35 @@ class BCIService:
         event = make_event(self.settings, "simulator", estimate)
         with self.lock:
             self.latest_event = event
+            self.latest_estimate = estimate
             self.connection = "simulated"
+            self.score_history.append({
+                "at_ms": int(time.time() * 1000),
+                "score": estimate.score,
+                "quality": estimate.quality,
+            })
         self.publisher.submit(event)
         return event
+
+    def visualization_payload(self):
+        with self.lock:
+            estimate = self.latest_estimate
+            diagnostics = self.estimator.diagnostics()
+            return {
+                "schema_version": VERSION,
+                "mode": self.settings.mode,
+                "connection_state": self.connection,
+                "state": estimate.state,
+                "signal_quality": estimate.quality,
+                "focus_score": estimate.score,
+                "sustained_for_ms": estimate.sustained_for_ms,
+                "dip_score_threshold": self.settings.dip_score,
+                "dip_seconds": self.settings.dip_seconds,
+                "baseline_seconds": self.settings.baseline_seconds,
+                "latest_focus_event": self.latest_event,
+                "score_history": list(self.score_history),
+                **diagnostics,
+            }
 
 
 def create_app(settings=None):
@@ -221,6 +260,16 @@ def create_app(settings=None):
         with service.lock:
             return {"schema_version": VERSION, "latest_focus_event": service.latest_event,
                     "connection_state": service.connection}
+
+    @app.get("/v1/visualization")
+    def visualization_data():
+        return JSONResponse(service.visualization_payload(),
+                            headers={"Cache-Control": "no-store"})
+
+    @app.get("/visualizer")
+    def visualizer():
+        return FileResponse(VISUALIZER_FILE, media_type="text/html",
+                            headers={"Cache-Control": "no-store"})
 
     @app.post("/v1/demo/trigger")
     def demo_trigger(body: DemoTrigger):

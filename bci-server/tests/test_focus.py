@@ -34,6 +34,7 @@ def test_dropout_clears_baseline_and_cannot_trigger_dip():
     assert disconnected.state == "unknown"
     assert disconnected.quality == "disconnected"
     assert estimator.baseline is None
+    assert estimator.diagnostics(10)["quality_reason"] == "No recent EEG packets."
 
 
 def test_nonfinite_or_flat_signal_is_poor_quality():
@@ -43,3 +44,17 @@ def test_nonfinite_or_flat_signal_is_poor_quality():
     result = feed(estimator, 1, 5, 0, 0)
     assert result.state == "unknown"
     assert result.quality == "poor"
+    assert "flat EEG channel" in estimator.diagnostics(6)["quality_reason"]
+
+
+def test_diagnostics_include_bands_and_bounded_local_trace():
+    estimator = FocusEstimator(baseline_seconds=1, dip_seconds=2)
+    feed(estimator, 0, 7, 3, 1)
+    diagnostics = estimator.diagnostics(now=7)
+    assert diagnostics["channel_names"] == ["TP9", "AF7", "AF8", "TP10"]
+    assert len(diagnostics["eeg"]) == 4
+    assert all(0 < len(channel) <= 240 for channel in diagnostics["eeg"])
+    assert diagnostics["sample_rate_hz"] == 256.0
+    assert diagnostics["baseline_progress"] == 1.0
+    assert set(diagnostics["band_powers"]) == {"theta", "alpha", "beta"}
+    assert diagnostics["engagement_ratio"] > 0

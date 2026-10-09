@@ -45,6 +45,9 @@ class FocusEstimator:
         self.recovery_since = None
         self.episode_fired = False
         self.last_state = "unknown"
+        self.band_powers = None
+        self.engagement_ratio = None
+        self.quality_reason = "No EEG packets yet."
 
     def ingest_eeg(self, values, now=None):
         now = time.monotonic() if now is None else now
@@ -71,51 +74,65 @@ class FocusEstimator:
         self.dip_since = None
         self.recovery_since = None
         self.last_state = "unknown"
+        self.band_powers = None
+        self.engagement_ratio = None
+        self.quality_reason = "No EEG packets yet."
 
-    def _unknown(self, quality, connection):
+    def _unknown(self, quality, connection, reason):
         self.dip_since = None
         self.recovery_since = None
         self.last_state = "unknown"
+        self.quality_reason = reason
         return Estimate("unknown", None, quality, 0, connection)
 
     def evaluate(self, now=None):
         now = time.monotonic() if now is None else now
+        self.band_powers = None
+        self.engagement_ratio = None
         if self.last_eeg_at is None or now - self.last_eeg_at > 2.0:
             self._clear_signal()
-            return self._unknown("disconnected", "disconnected")
+            return self._unknown("disconnected", "disconnected", "No recent EEG packets.")
         if len(self.samples) < self.sample_rate * 4:
-            return self._unknown("poor", "connected")
+            return self._unknown("poor", "connected", "Collecting four seconds of EEG.")
 
         data = np.asarray(self.samples, dtype=float)
         duration = self.times[-1] - self.times[0]
-        if duration < 3.7 or duration > 4.3 or np.max(np.abs(data)) > 1000:
-            return self._unknown("poor", "connected")
+        if duration < 3.7 or duration > 4.3:
+            return self._unknown("poor", "connected", "EEG packet timing is outside the expected range.")
+        if np.max(np.abs(data)) > 1000:
+            return self._unknown("poor", "connected", "Large EEG amplitude; check electrode contact and movement.")
         if np.any(np.std(data, axis=0) < 0.5):
-            return self._unknown("poor", "connected")
+            return self._unknown("poor", "connected", "A flat EEG channel suggests poor electrode contact.")
         if self.last_acc_at is not None and now - self.last_acc_at < 2:
             # Large acceleration is a likely motion artifact.
             if np.linalg.norm(self.last_acc) > 1.8:
-                return self._unknown("poor", "connected")
+                return self._unknown("poor", "connected", "Strong head movement detected.")
 
         freqs, psd = welch(data.T, fs=self.sample_rate, nperseg=256,
                            noverlap=128, detrend="constant")
         def power(lo, hi):
             band = (freqs >= lo) & (freqs < hi)
             return float(np.mean(psd[:, band]))
-        ratio = power(13, 30) / max(power(4, 8) + power(8, 13), 1e-12)
+        theta = power(4, 8)
+        alpha = power(8, 13)
+        beta = power(13, 30)
+        ratio = beta / max(theta + alpha, 1e-12)
         if not math.isfinite(ratio):
-            return self._unknown("poor", "connected")
+            return self._unknown("poor", "connected", "Frequency-band power could not be computed.")
+        self.band_powers = {"theta": theta, "alpha": alpha, "beta": beta}
+        self.engagement_ratio = ratio
 
         if self.baseline is None:
             if self.baseline_started is None:
                 self.baseline_started = now
             self.baseline_values.append(ratio)
             if now - self.baseline_started < self.baseline_seconds:
-                return self._unknown("poor", "connected")
+                return self._unknown("poor", "connected", "Calibrating your individual baseline.")
             self.baseline = max(statistics.median(self.baseline_values), 1e-6)
             self.baseline_values.clear()
 
         score = round(min(1.0, max(0.0, ratio / (2 * self.baseline))), 4)
+        self.quality_reason = "EEG usable for the experimental estimate."
         if score < self.dip_score:
             self.recovery_since = None
             if self.dip_since is None:
@@ -143,3 +160,40 @@ class FocusEstimator:
             self.recovery_since = None
         self.last_state = "unknown"
         return Estimate("unknown", score, "good", 0, "connected")
+
+    def diagnostics(self, now=None, max_points=240):
+        """Small, local-only snapshot for the browser visualizer.
+
+        Call while holding the service's estimator lock. The agent publisher
+        never uses this data or sends raw EEG outside the local BCI process.
+        """
+        now = time.monotonic() if now is None else now
+        samples = list(self.samples)
+        times = list(self.times)
+        step = max(1, math.ceil(len(samples) / max_points))
+        shown = samples[::step]
+        rate = None
+        if len(times) > 1 and times[-1] > times[0]:
+            rate = round((len(times) - 1) / (times[-1] - times[0]), 1)
+        baseline_progress = 1.0 if self.baseline is not None else 0.0
+        if self.baseline_started is not None and self.baseline is None:
+            baseline_progress = min(1.0, max(0.0,
+                (now - self.baseline_started) / max(self.baseline_seconds, 0.001)))
+        dip_progress = 0.0
+        if self.dip_since is not None:
+            dip_progress = min(1.0, max(0.0,
+                (now - self.dip_since) / max(self.dip_seconds, 0.001)))
+        return {
+            "channel_names": ["TP9", "AF7", "AF8", "TP10"],
+            "eeg": [[round(sample[channel], 2) for sample in shown]
+                    for channel in range(4)],
+            "sample_rate_hz": rate,
+            "last_eeg_age_ms": None if self.last_eeg_at is None else
+                max(0, int((now - self.last_eeg_at) * 1000)),
+            "band_powers": self.band_powers,
+            "quality_reason": self.quality_reason,
+            "engagement_ratio": self.engagement_ratio,
+            "baseline_ratio": self.baseline,
+            "baseline_progress": round(baseline_progress, 3),
+            "dip_progress": round(dip_progress, 3),
+        }

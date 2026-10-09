@@ -80,6 +80,20 @@ whether EEG packets are arriving. `POST /v1/demo/trigger` is disabled in live
 mode. If the bridge disconnects, restart it; the BCI service emits `unknown`
 when packets stop.
 
+## Local signal visualizer
+
+With the BCI service running in either mode, open
+**http://127.0.0.1:8001/visualizer** in a browser. In live mode, it shows the
+four raw EEG traces, packet age and rate, theta/alpha/beta power, engagement
+ratio, baseline progress, focus score, and dip hold time. Allow at least four
+seconds for the EEG window and another 30 seconds for the personal baseline.
+Simulator mode has clearly labelled state buttons and no pretend EEG waveform.
+
+The page reads `GET /v1/visualization`, a local diagnostic endpoint containing
+a decimated four-second EEG buffer. Keep the service bound to `127.0.0.1` as
+the provided launcher does. This diagnostic data is **never included** in the
+focus event sent to the Next.js app. The visualizer has no purchase controls.
+
 ## Bridge source and binary handling
 
 `bridge/windows/` contains only the bridge's C++ source and Visual Studio
@@ -96,6 +110,8 @@ applicable Muse SDK terms before distributing a binary bundle.
 
 - `GET /health`: mode and connection state.
 - `GET /v1/state`: latest aggregate focus event and connection state.
+- `GET /visualizer`: local browser diagnostic dashboard.
+- `GET /v1/visualization`: local, no-cache diagnostic data for that dashboard.
 - `POST /v1/demo/trigger`: simulator-only event trigger.
 
 The service posts v1 focus events to the Next.js app's `/api/v1/focus-events` with

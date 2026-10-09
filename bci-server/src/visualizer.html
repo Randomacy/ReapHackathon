@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tempo Signal Lab</title>
+  <style>
+    :root { color-scheme: dark; --bg:#091216; --panel:#102026; --line:#254047; --text:#e9f4f0; --muted:#8aa8a7; --mint:#76e4ba; --amber:#f6c36b; --red:#f18386; --blue:#76b8fa; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; background:radial-gradient(circle at 85% -10%,#183c3c 0,transparent 38%),var(--bg); color:var(--text); font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif; }
+    .shell { max-width:1450px; margin:auto; padding:28px clamp(18px,3vw,48px) 42px; }
+    header { display:flex; justify-content:space-between; align-items:center; gap:18px; margin-bottom:28px; }
+    .brand { display:flex; align-items:center; gap:14px; }
+    .mark { display:grid; place-items:center; width:42px; height:42px; border:1px solid #56857a; border-radius:13px; background:#17372f; color:var(--mint); font-size:25px; font-weight:700; }
+    .brand strong { display:block; font-size:18px; letter-spacing:.16em; }
+    .eyebrow { color:var(--mint); font-size:11px; font-weight:700; letter-spacing:.18em; text-transform:uppercase; }
+    .muted { color:var(--muted); }
+    .status { display:flex; align-items:center; gap:10px; padding:9px 14px; border-radius:100px; background:#102d2a; border:1px solid #2c5b52; color:#b6eedb; font-weight:600; font-size:13px; white-space:nowrap; }
+    .status[data-state="off"] { color:#efb8aa; background:#332522; border-color:#684237; }
+    .dot { width:8px; height:8px; border-radius:50%; background:currentColor; box-shadow:0 0 12px currentColor; }
+    .intro { display:flex; align-items:end; justify-content:space-between; gap:25px; margin-bottom:23px; }
+    h1 { font-size:clamp(32px,4vw,54px); line-height:1.05; letter-spacing:-.045em; margin:7px 0 10px; }
+    p { margin:0; }
+    .intro p { max-width:650px; color:var(--muted); }
+    .mode { border:1px solid #38535a; border-radius:10px; padding:8px 12px; color:#d0e3e0; font-size:12px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; }
+    .grid { display:grid; grid-template-columns:minmax(0,1.8fr) minmax(290px,.8fr); gap:17px; }
+    .card { background:linear-gradient(155deg,#13272c,#0e1c21); border:1px solid #284047; border-radius:20px; box-shadow:0 16px 40px #0003; padding:21px 23px; min-width:0; }
+    .card-head { display:flex; align-items:start; justify-content:space-between; gap:15px; margin-bottom:16px; }
+    h2 { font-size:17px; letter-spacing:-.02em; margin:0; }
+    .small { font-size:12px; color:var(--muted); }
+    .pill { border:1px solid #34545a; border-radius:100px; padding:4px 9px; font-size:11px; color:#aac7c4; white-space:nowrap; }
+    .wave-card { min-height:392px; }
+    .wave-wrap { height:274px; position:relative; background:#0b1b20; border:1px solid #264148; border-radius:13px; overflow:hidden; }
+    canvas { display:block; width:100%; height:100%; }
+    .wave-labels { position:absolute; left:11px; top:0; bottom:0; width:55px; display:grid; grid-template-rows:repeat(4,1fr); align-items:center; pointer-events:none; font-size:11px; font-weight:800; letter-spacing:.07em; text-shadow:0 2px 5px #071418; }
+    .wave-footer { display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px; margin-top:12px; color:var(--muted); font-size:12px; }
+    .focus-card { display:flex; flex-direction:column; }
+    .focus-center { display:grid; justify-items:center; padding:5px 0 9px; }
+    .gauge { width:182px; height:182px; border-radius:50%; padding:12px; background:conic-gradient(var(--gauge-color,var(--mint)) var(--gauge,0%),#294047 0); transition:background .3s; }
+    .gauge-inner { display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; height:100%; border-radius:50%; background:#102126; }
+    .gauge-value { font-size:51px; font-weight:700; line-height:1; letter-spacing:-.08em; font-variant-numeric:tabular-nums; }
+    .gauge-label { color:var(--muted); font-size:12px; margin-top:8px; }
+    .state-name { font-size:21px; font-weight:700; margin:13px 0 3px; }
+    .meter-head { display:flex; justify-content:space-between; color:#a9c5c1; font-size:12px; margin:13px 0 7px; }
+    .track { width:100%; height:8px; border-radius:20px; overflow:hidden; background:#2a4045; }
+    .fill { width:0; height:100%; background:linear-gradient(90deg,#55cda4,#a7f2d1); border-radius:inherit; transition:width .3s; }
+    .fill.dip { background:linear-gradient(90deg,#e9a04f,#f0cf7f); }
+    .lower { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:17px; margin-top:17px; }
+    .band-row { display:grid; grid-template-columns:58px 1fr 76px; align-items:center; gap:13px; margin:16px 0; font-size:13px; }
+    .band-row strong { font-variant-numeric:tabular-nums; text-align:right; font-weight:600; color:#bdd3d0; }
+    .band-track { height:11px; background:#263b41; border-radius:100px; overflow:hidden; }
+    .band-fill { height:100%; width:0; border-radius:inherit; transition:width .35s; }
+    .theta { background:#ab9df4; } .alpha { background:#76b8fa; } .beta { background:#f6c36b; }
+    .ratio { margin-top:19px; padding-top:14px; border-top:1px solid #294248; display:flex; justify-content:space-between; gap:8px; font-size:13px; }
+    .ratio strong { font-size:18px; font-variant-numeric:tabular-nums; }
+    .history-wrap { height:148px; background:#0b1b20; border:1px solid #264148; border-radius:13px; overflow:hidden; }
+    .history-note { display:flex; justify-content:space-between; gap:8px; margin-top:8px; color:var(--muted); font-size:11px; }
+    .bottom { display:grid; grid-template-columns:1fr 1fr; gap:17px; margin-top:17px; }
+    .event-line { display:flex; justify-content:space-between; gap:12px; padding:9px 0; border-bottom:1px solid #294047; font-size:13px; }
+    .event-line:last-child { border:0; }
+    .event-line strong { text-align:right; font-weight:650; font-variant-numeric:tabular-nums; }
+    .buttons { display:flex; flex-wrap:wrap; gap:9px; margin-top:18px; }
+    button { background:#24443f; color:#d6f4e7; border:1px solid #48806e; border-radius:9px; padding:9px 12px; font:inherit; font-weight:700; cursor:pointer; }
+    button:hover { background:#326353; } button:focus-visible { outline:2px solid #b3ffe0; outline-offset:2px; }
+    .notice { margin-top:18px; padding:13px 16px; border-left:3px solid var(--amber); background:#2b2a23; border-radius:6px 10px 10px 6px; color:#e5d8bc; font-size:12px; }
+    @media (max-width:950px) { .grid,.lower,.bottom { grid-template-columns:1fr; } .wave-card { min-height:0; } }
+    @media (max-width:550px) { .shell { padding:18px 13px 28px; } header,.intro { align-items:start; } .intro { flex-direction:column; } .card { padding:17px; } .brand strong { font-size:15px; } }
+  </style>
+</head>
+<body>
+<main class="shell">
+  <header>
+    <div class="brand"><div class="mark" aria-hidden="true">∿</div><div><span class="eyebrow">BCI workbench</span><strong>TEMPO / SIGNAL LAB</strong></div></div>
+    <div id="connection" class="status" data-state="off"><span class="dot"></span><span id="connection-text">Connecting to service</span></div>
+  </header>
+  <div class="intro">
+    <div><span class="eyebrow">Live diagnostic view</span><h1>See the signal.<br>Understand the estimate.</h1><p>Four Muse 2 EEG channels, the frequency-band feature, and the focus decision that Tempo would receive.</p></div>
+    <span id="mode" class="mode">Checking mode</span>
+  </div>
+  <div class="grid">
+    <section class="card wave-card" aria-label="Muse EEG traces">
+      <div class="card-head"><div><h2>EEG channels</h2><div class="small">Most recent four seconds · raw microvolts</div></div><span id="rate" class="pill">— Hz</span></div>
+      <div class="wave-wrap"><canvas id="eeg" aria-label="Four EEG signal traces"></canvas><div class="wave-labels" aria-hidden="true"><span style="color:#76b8fa">TP9</span><span style="color:#76e4ba">AF7</span><span style="color:#f6c36b">AF8</span><span style="color:#f18386">TP10</span></div></div>
+      <div class="wave-footer"><span id="sample-age">Waiting for EEG packets</span><span id="scale">Autoscaled per display</span></div>
+    </section>
+    <section class="card focus-card" aria-label="Focus estimate">
+      <div class="card-head"><div><h2>Experimental focus signal</h2><div class="small">Baseline-relative score · 0 to 1</div></div><span id="quality" class="pill">Unknown quality</span></div>
+      <div class="focus-center"><div id="gauge" class="gauge"><div class="gauge-inner"><span id="score" class="gauge-value">—</span><span class="gauge-label">FOCUS SCORE</span></div></div><div id="state" class="state-name">Waiting for data</div><div id="state-detail" class="small">Start the Muse bridge to begin.</div></div>
+      <div class="meter-head"><span>Individual baseline</span><span id="baseline-label">0%</span></div><div class="track"><div id="baseline-fill" class="fill"></div></div>
+      <div class="meter-head"><span>Dip hold time</span><span id="dip-label">0 / 30 s</span></div><div class="track"><div id="dip-fill" class="fill dip"></div></div>
+    </section>
+  </div>
+  <div class="lower">
+    <section class="card" aria-label="Frequency bands"><div class="card-head"><div><h2>Frequency-band power</h2><div class="small">Welch estimate across four channels · µV²/Hz</div></div></div>
+      <div class="band-row"><span>Theta</span><div class="band-track"><div id="theta-bar" class="band-fill theta"></div></div><strong id="theta-value">—</strong></div>
+      <div class="band-row"><span>Alpha</span><div class="band-track"><div id="alpha-bar" class="band-fill alpha"></div></div><strong id="alpha-value">—</strong></div>
+      <div class="band-row"><span>Beta</span><div class="band-track"><div id="beta-bar" class="band-fill beta"></div></div><strong id="beta-value">—</strong></div>
+      <div class="ratio"><span class="muted">Engagement index · beta / (alpha + theta)</span><strong id="ratio">—</strong></div>
+    </section>
+    <section class="card" aria-label="Focus score history"><div class="card-head"><div><h2>Focus over time</h2><div class="small">Last 60 seconds · gaps mean unknown signal</div></div><span id="threshold" class="pill">Dip threshold 0.35</span></div><div class="history-wrap"><canvas id="history" aria-label="Focus score over time"></canvas></div><div class="history-note"><span>60 seconds ago</span><span>Now</span></div></section>
+  </div>
+  <div class="bottom">
+    <section class="card" aria-label="Latest event"><div class="card-head"><div><h2>Latest aggregate event</h2><div class="small">Delivery to Tempo is separate · no raw EEG is sent</div></div></div><div class="event-line"><span class="muted">Source</span><strong id="event-source">—</strong></div><div class="event-line"><span class="muted">State</span><strong id="event-state">—</strong></div><div class="event-line"><span class="muted">Observed</span><strong id="event-time">—</strong></div></section>
+    <section class="card" aria-label="Session controls"><div class="card-head"><div><h2>Session</h2><div class="small">Local browser diagnostic, separate from the Tempo app</div></div></div><div class="event-line"><span class="muted">Mode</span><strong id="session-mode">—</strong></div><div class="event-line"><span class="muted">EEG packet age</span><strong id="session-age">—</strong></div><div id="demo-controls" class="buttons" hidden><button type="button" data-demo="focused">Simulate focused</button><button type="button" data-demo="focus_dip">Simulate dip</button><button type="button" data-demo="unknown">Simulate unknown</button></div></section>
+  </div>
+  <div class="notice">This score is a demonstration heuristic, not a clinical measurement of attention or fatigue. Raw EEG remains on this computer when the BCI API is bound to 127.0.0.1.</div>
+</main>
+<script>
+  const $ = id => document.getElementById(id);
+  const colors = ['#76b8fa','#76e4ba','#f6c36b','#f18386'];
+  const fmt = value => value == null ? '—' : value >= 100 ? value.toFixed(0) : value >= 1 ? value.toFixed(2) : value.toExponential(1);
+  let current = null;
+
+  function canvasContext(canvas) {
+    const ratio = window.devicePixelRatio || 1;
+    const width = Math.max(1, canvas.clientWidth);
+    const height = Math.max(1, canvas.clientHeight);
+    canvas.width = Math.round(width * ratio);
+    canvas.height = Math.round(height * ratio);
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(ratio,0,0,ratio,0,0);
+    return {ctx,width,height};
+  }
+
+  function drawEeg(data) {
+    const {ctx,width,height} = canvasContext($('eeg'));
+    const rows = data.eeg || [[],[],[],[]];
+    const rowHeight = height / 4;
+    ctx.strokeStyle = '#284148'; ctx.lineWidth = 1;
+    for (let i=1; i<4; i++) { ctx.beginPath(); ctx.moveTo(0,i*rowHeight); ctx.lineTo(width,i*rowHeight); ctx.stroke(); }
+    for (let i=0; i<4; i++) { ctx.beginPath(); ctx.moveTo(0,(i+.5)*rowHeight); ctx.lineTo(width,(i+.5)*rowHeight); ctx.stroke(); }
+    for (let i=1; i<8; i++) { ctx.beginPath(); ctx.moveTo(i*width/8,0); ctx.lineTo(i*width/8,height); ctx.stroke(); }
+    const amplitudes = rows.flat().map(Math.abs).sort((a,b)=>a-b);
+    const scale = Math.max(10, (amplitudes[Math.floor(amplitudes.length*.95)] || 0)*1.4);
+    $('scale').textContent = rows[0]?.length ? `±${scale.toFixed(0)} µV display scale` : 'Waiting for raw EEG';
+    rows.forEach((samples,row) => {
+      if (samples.length < 2) return;
+      ctx.strokeStyle = colors[row]; ctx.lineWidth = 1.6; ctx.beginPath();
+      samples.forEach((value,index) => {
+        const x = 62 + index/(samples.length-1)*(width-68);
+        const y = (row+.5)*rowHeight - Math.max(-1,Math.min(1,value/scale))*rowHeight*.42;
+        if (index === 0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      });
+      ctx.stroke();
+    });
+    if (!rows[0]?.length) { ctx.fillStyle='#7f9b9b'; ctx.font='13px system-ui'; ctx.fillText(data.mode==='simulator'?'Simulator mode has no EEG stream':'Waiting for Muse EEG stream',75,height/2); }
+  }
+
+  function drawHistory(data) {
+    const {ctx,width,height} = canvasContext($('history'));
+    const left=26,right=10,top=13,bottom=18;
+    ctx.strokeStyle='#29434a'; ctx.lineWidth=1;
+    for (const value of [0,.25,.5,.75,1]) { const y=top+(1-value)*(height-top-bottom); ctx.beginPath(); ctx.moveTo(left,y); ctx.lineTo(width-right,y); ctx.stroke(); }
+    const threshold=data.dip_score_threshold;
+    const thresholdY=top+(1-threshold)*(height-top-bottom);
+    ctx.setLineDash([5,5]); ctx.strokeStyle='#e8b56b'; ctx.beginPath(); ctx.moveTo(left,thresholdY); ctx.lineTo(width-right,thresholdY); ctx.stroke(); ctx.setLineDash([]);
+    ctx.font='10px system-ui'; ctx.fillStyle='#8aa8a7'; ctx.fillText('1.0',3,top+4); ctx.fillText('0',13,height-bottom+3);
+    const points=data.score_history||[];
+    const end=Date.now(), start=end-60000;
+    ctx.strokeStyle='#78e4ba'; ctx.lineWidth=2; ctx.beginPath(); let started=false;
+    points.forEach(point=>{
+      if (point.at_ms<start || point.score==null || point.quality!=='good') { started=false; return; }
+      const x=left+Math.max(0,Math.min(1,(point.at_ms-start)/60000))*(width-left-right);
+      const y=top+(1-point.score)*(height-top-bottom);
+      if (!started) { ctx.moveTo(x,y); started=true; } else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+  }
+
+  function render(data) {
+    current=data;
+    const connected=data.mode==='simulator' || data.connection_state==='connected';
+    $('connection').dataset.state=connected?'on':'off';
+    $('connection-text').textContent=data.mode==='simulator'?'Simulator ready':connected?'Muse stream connected':'Waiting for Muse stream';
+    $('mode').textContent=data.mode==='simulator'?'SIMULATOR':'LIVE MUSE 2';
+    $('session-mode').textContent=data.mode==='simulator'?'Simulated':'Live Muse 2';
+    $('demo-controls').hidden=data.mode!=='simulator';
+    $('quality').textContent=data.mode==='simulator'?'Simulated':data.signal_quality==='good'?'Good signal':data.signal_quality==='poor'?'Poor signal':'Disconnected';
+    const score=data.focus_score;
+    $('score').textContent=score==null?'—':score.toFixed(2);
+    $('gauge').style.setProperty('--gauge',`${Math.round((score||0)*100)}%`);
+    $('gauge').style.setProperty('--gauge-color',data.state==='focus_dip'?'var(--amber)':'var(--mint)');
+    let state=data.state==='focus_dip'?'Focus dip':data.state==='focused'?'Focused':'Unknown';
+    let detail=data.mode==='simulator'?'Simulator state only; no EEG measurement.':data.quality_reason||'Waiting for reliable signal.';
+    if (data.mode==='live' && data.connection_state==='connected' && data.baseline_progress<1 && data.quality_reason==='Calibrating your individual baseline.') { state='Calibrating'; }
+    else if (data.mode==='live' && data.signal_quality==='good' && data.dip_progress>0 && data.state==='unknown') { state='Possible dip'; detail='Below threshold; waiting for the sustained window.'; }
+    $('state').textContent=state; $('state-detail').textContent=detail;
+    $('baseline-fill').style.width=`${Math.round(data.baseline_progress*100)}%`;
+    $('baseline-label').textContent=`${Math.round(data.baseline_progress*100)}%`;
+    $('dip-fill').style.width=`${Math.round(data.dip_progress*100)}%`;
+    $('dip-label').textContent=`${(data.sustained_for_ms/1000).toFixed(0)} / ${data.dip_seconds} s`;
+    $('rate').textContent=data.sample_rate_hz==null?'— Hz':`${data.sample_rate_hz.toFixed(0)} Hz`;
+    const age=data.last_eeg_age_ms;
+    $('sample-age').textContent=age==null?'No EEG packets yet':`Latest packet ${age} ms ago`;
+    $('session-age').textContent=age==null?'—':`${age} ms`;
+    const powers=data.band_powers||{}; const max=Math.max(powers.theta||0,powers.alpha||0,powers.beta||0,1e-12);
+    for (const band of ['theta','alpha','beta']) { const value=powers[band]; $(''+band+'-value').textContent=fmt(value); $(''+band+'-bar').style.width=value==null?'0%':`${Math.max(3,Math.sqrt(value/max)*100)}%`; }
+    $('ratio').textContent=fmt(data.engagement_ratio);
+    $('threshold').textContent=`Dip threshold ${data.dip_score_threshold.toFixed(2)}`;
+    const event=data.latest_focus_event;
+    $('event-source').textContent=event?.source||'—'; $('event-state').textContent=event?.state||'—';
+    $('event-time').textContent=event?.observed_at?new Date(event.observed_at).toLocaleTimeString():'—';
+    drawEeg(data); drawHistory(data);
+  }
+
+  async function poll() {
+    try {
+      const response=await fetch('/v1/visualization',{cache:'no-store'});
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      render(await response.json());
+    } catch (_) {
+      $('connection').dataset.state='off'; $('connection-text').textContent='BCI service unavailable';
+    } finally { setTimeout(poll,500); }
+  }
+
+  document.querySelectorAll('[data-demo]').forEach(button=>button.addEventListener('click',async()=>{
+    button.disabled=true;
+    try { await fetch('/v1/demo/trigger',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({state:button.dataset.demo})}); }
+    finally { button.disabled=false; }
+  }));
+  window.addEventListener('resize',()=>{ if(current) {drawEeg(current);drawHistory(current);} });
+  poll();
+</script>
+</body>
+</html>
