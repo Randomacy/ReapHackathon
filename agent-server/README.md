@@ -98,6 +98,27 @@ and [one-time purchase flow](https://docs.reap.global/agentic-payments/one-time-
 The Reap adapter is tested with fake API responses. A real sandbox quote,
 enrollment, hosted approval, and checkout have not yet been exercised.
 
+## Buildathon demo readiness
+
+The Reap × 65labs buildathon page lists `dutchcolony.sg` in the Singapore
+coffee category, while warning that a listed merchant does not guarantee a
+working sandbox checkout. The event requires an Agentic Payments or Kwal
+sandbox flow; Tempo's local `mock` mode is only a development aid. Checkout
+simulation creates no real merchant purchase or delivery.
+
+Before presenting the payment integration, complete the external-card
+enrollment on Reap's hosted page, obtain a final sandbox quote for an
+available item, show the Tempo spending limit and per-order approval, follow
+Reap's hosted approval, and refresh the checkout to show its final status and
+merchant order reference. If the Reap flow fails, show the explicit blocked or
+unknown state rather than describing a mock order as a Reap checkout.
+
+The event page asks for a demo recording of at most three minutes, a source
+repository link, and a brief integration explanation. Its 9 October 2026
+project submission deadline is 9:00 pm Singapore time. The team also needs to
+confirm that the repository has an approved open-source licence before
+submission; this PR does not choose one on behalf of the team.
+
 ## Tests
 
 From `agent-server/`, install `requirements-dev.txt` and run
