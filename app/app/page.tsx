@@ -1,3 +1,1 @@
-export default function Home() {
-  return <main />;
-}
+export { default } from "./order/page";
