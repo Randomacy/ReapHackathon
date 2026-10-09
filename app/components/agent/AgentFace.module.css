@@ -1,0 +1,48 @@
+.face {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  background: linear-gradient(
+    165deg,
+    var(--coffee-avatar-surface-start),
+    var(--coffee-avatar-surface-end)
+  );
+  border: 1px solid var(--coffee-avatar-border);
+  box-shadow:
+    0 14px 30px rgba(74, 47, 34, 0.18),
+    0 3px 8px rgba(74, 47, 34, 0.12);
+}
+
+.viewport {
+  position: relative;
+  overflow: hidden;
+  filter:
+    drop-shadow(0 1px 1px rgba(74, 47, 34, 0.5))
+    drop-shadow(0 0 3px rgba(74, 47, 34, 0.22));
+}
+
+.strip,
+.stripStill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+
+.strip {
+  animation-name: spritePlay;
+  animation-play-state: running;
+}
+
+@keyframes spritePlay {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(var(--sprite-end-x));
+  }
+}

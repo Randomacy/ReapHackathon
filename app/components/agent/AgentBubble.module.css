@@ -1,0 +1,41 @@
+.bubbleWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.tail {
+  width: 22px;
+  height: 22px;
+  background: var(--coffee-surface);
+  border: 1px solid var(--coffee-border);
+  border-radius: 4px;
+  transform: rotate(45deg);
+  margin-bottom: -12px;
+  z-index: 0;
+  box-shadow: 0 4px 10px rgba(74, 47, 34, 0.1);
+}
+
+.bubble {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-width: 300px;
+  max-width: 380px;
+  background: var(--coffee-surface);
+  border: 1px solid var(--coffee-border);
+  border-radius: 28px;
+  padding: 24px 28px;
+  color: var(--coffee-text);
+  text-align: center;
+  box-shadow:
+    0 18px 44px rgba(74, 47, 34, 0.22),
+    0 4px 14px rgba(74, 47, 34, 0.14);
+}
+
+.bubbleContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
