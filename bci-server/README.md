@@ -3,8 +3,8 @@
 Runs on the same Windows PC as the Muse 2 bridge. The bridge sends four EEG
 channels (`TP9, AF7, AF8, TP10`) as `/muse/eeg` and acceleration as
 `/muse/acc` over OSC UDP to `127.0.0.1:7000`. This service listens there in
-live mode and posts aggregate focus events to the Next.js app at
-`127.0.0.1:3000/api/v1/focus-events`.
+live mode and posts aggregate focus events to the agent server at
+`127.0.0.1:8002/v1/focus-events`.
 Only one process can bind OSC port 7000, so close the reference classifier GUI
 before starting live mode.
 
@@ -28,8 +28,8 @@ python -m venv .venv
 python -m pip install -r requirements.lock.txt
 ```
 
-Set `BCI_EVENT_TOKEN` to the same value as the Next.js server. Optionally set
-`BCI_APP_URL` (default `http://127.0.0.1:3000`). Both APIs should bind to
+Set `BCI_EVENT_TOKEN` to the same value as the agent server. Optionally set
+`BCI_APP_URL` (default `http://127.0.0.1:8002`). Both APIs should bind to
 loopback on this one PC. The `.env.example` file lists all configuration but
 is not loaded automatically; set the variables in the terminal before launch.
 
@@ -98,7 +98,7 @@ applicable Muse SDK terms before distributing a binary bundle.
 - `GET /v1/state`: latest aggregate focus event and connection state.
 - `POST /v1/demo/trigger`: simulator-only event trigger.
 
-The service posts v1 focus events to the Next.js app's `/api/v1/focus-events` with
+The service posts v1 focus events to the agent server's `/v1/focus-events` with
 `X-Event-Token`. Raw EEG is never sent to the agent. `source` is `muse2` or
 `simulator`. All event timestamps are UTC. Each transition to a new state or
 signal condition gets a UUID. The BCI service does not call Reap.

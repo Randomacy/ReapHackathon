@@ -29,6 +29,6 @@ def test_retry_keeps_event_id(monkeypatch):
     publisher.queue.join()
     publisher.stop()
     assert requests == [
-        ("http://127.0.0.1:3000/api/v1/focus-events", "fixed-id", "local-test-token"),
-        ("http://127.0.0.1:3000/api/v1/focus-events", "fixed-id", "local-test-token"),
+        ("http://127.0.0.1:8002/v1/focus-events", "fixed-id", "local-test-token"),
+        ("http://127.0.0.1:8002/v1/focus-events", "fixed-id", "local-test-token"),
     ]

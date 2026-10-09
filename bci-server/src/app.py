@@ -25,7 +25,7 @@ VERSION = "1.0"
 @dataclass(frozen=True)
 class Settings:
     mode: str = "simulator"
-    app_url: str = "http://127.0.0.1:3000"
+    app_url: str = "http://127.0.0.1:8002"
     event_token: str = ""
     user_id: str = "demo-user"
     osc_host: str = "127.0.0.1"
@@ -38,7 +38,7 @@ class Settings:
     def from_env(cls):
         return cls(
             mode=os.getenv("BCI_MODE", "simulator"),
-            app_url=os.getenv("BCI_APP_URL", "http://127.0.0.1:3000"),
+            app_url=os.getenv("BCI_APP_URL", "http://127.0.0.1:8002"),
             event_token=os.getenv("BCI_EVENT_TOKEN", ""),
             user_id=os.getenv("BCI_USER_ID", "demo-user"),
             osc_host=os.getenv("BCI_OSC_HOST", "127.0.0.1"),
@@ -91,7 +91,7 @@ class Publisher:
         if not self.settings.event_token:
             LOG.warning("BCI_EVENT_TOKEN is unset; events cannot be published")
             return
-        url = self.settings.app_url.rstrip("/") + "/api/v1/focus-events"
+        url = self.settings.app_url.rstrip("/") + "/v1/focus-events"
         with httpx.Client(timeout=2.0) as client:
             while not self.stop_event.is_set() or not self.queue.empty():
                 try:
