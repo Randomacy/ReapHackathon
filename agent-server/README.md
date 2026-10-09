@@ -48,7 +48,9 @@ authorize spending.
 
 ## Reap sandbox integration boundary
 
-The documented Reap flow is external-card enrollment on a Reap-hosted page,
+This adapter follows [Reap Agentic Payments](https://docs.reap.global/agentic-payments/overview).
+The Reap Protocol SDK is a separate product. The documented flow is external-card
+enrollment on a Reap-hosted page,
 product search/details, an expiring merchant quote, checkout with a hosted
 approval, and a checkout status read. `src/reap_client.py` implements those
 HTTP operations against `https://sg.sandbox.api.reap.global` with the
@@ -75,6 +77,21 @@ A read-only sandbox catalogue search on 9 October 2026 found Dutch Colony
 return Iced Black in the searches used. The final quote may add shipping or
 tax and must fit the user's mandate. The merchant states this product needs
 four hours of preparation, so Tempo must present it as a planned coffee order.
+
+Tempo's `PUT /v1/mandate` is a local spending policy. Reap also describes a
+separate mandate resource in its [one-time purchase guide](https://docs.reap.global/agentic-payments/one-time-purchases),
+but the published Agentic Payments API reference currently lists a read endpoint
+for mandates and no create endpoint, and its checkout request takes a quote ID
+and enrollment ID without a mandate ID. We therefore do not claim that the
+local policy creates or updates a Reap mandate. Confirm mandate provisioning
+with Reap before claiming full end-to-end mandate coverage.
+
+The one-time guide describes quoting a merchant checkout URL when the merchant
+domain is allowlisted. Reap's [FAQ](https://docs.reap.global/agentic-payments/faq)
+says that custom checkout URLs are enabled per account and may not yet be live.
+The linked Dutch Colony item page is not itself a checkout URL. Tempo uses the
+catalogue variant flow until Reap confirms that this merchant and account can
+use a constructed checkout URL.
 
 Read [Reap's setup guide](https://docs.reap.global/agentic-payments/setup)
 and [one-time purchase flow](https://docs.reap.global/agentic-payments/one-time-purchases).
