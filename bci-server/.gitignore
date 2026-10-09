@@ -1,0 +1,10 @@
+.env
+.venv/
+.tmp/
+__pycache__/
+.pytest_cache/
+*.pyc
+recordings/
+bridge/local/
+bridge/windows/x64/
+bridge/windows/muse_osc_bridge/x64/
